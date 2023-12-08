@@ -1,8 +1,21 @@
 const canvas = document.getElementById("canvas") as HTMLCanvasElement
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
 
+
+class NodePosition{
+    h: number
+    v: number
+
+    constructor(h: number, v: number){
+        this.h = h
+        this.v = v
+    }
+}
+
+
 class TreeNode {
     value: number
+    pos: NodePosition
     left: TreeNode | null = null
     right: TreeNode | null = null
     parent: TreeNode | null = null
@@ -11,9 +24,9 @@ class TreeNode {
         this.value = value
     }
 
-    render(this: TreeNode, ctx: CanvasRenderingContext2D,x: number, y: number) {
+    render(this: TreeNode, ctx: CanvasRenderingContext2D,x: number, y: number, radius: number) {
         ctx.beginPath()
-        ctx.ellipse(x, y, 25, 25, 0, 0, 360)
+        ctx.ellipse(x, y, radius, radius, 0, 0, 360)
         ctx.stroke()
         ctx.font = "25px Arial";
         ctx.fillStyle = "#333333"
@@ -26,6 +39,8 @@ class TreeNode {
 
 class Tree {
     root: TreeNode | null = null
+
+    node_radius: number = 25
 
     add_node(this: Tree, value: number): void {
         const new_node = new TreeNode(value)
@@ -42,12 +57,15 @@ class Tree {
         new_node.parent = y
         if (y === null){
             this.root = new_node
+            this.root.pos = new NodePosition(0, 0)
             return
         }
         if (y.value < new_node.value){
             y.right = new_node
+            new_node.pos = new NodePosition(y.pos.h + 1, y.pos.v * 2 + 1)
         } else {
             y.left = new_node
+            new_node.pos = new NodePosition(y.pos.h + 1, y.pos.v * 2)
         }
     }
 
@@ -55,7 +73,26 @@ class Tree {
         if (this.root === null){
             return
         }
-        this.root.render(ctx, 100, 100)
+        
+        const queue: TreeNode[] = [this.root]
+
+        while (queue.length > 0){
+            const node: TreeNode = queue.pop()
+            const y = 25 + node.pos.h * 50
+            const box_width = canvas.width / (2 ** node.pos.h)
+            const x = box_width * node.pos.v + box_width / 2
+
+            if (box_width > this.node_radius){
+                node.render(ctx, x, y, this.node_radius)
+            }
+
+            if(node.left !== null){
+                queue.push(node.left)
+            }
+            if(node.right !== null){
+                queue.push(node.right)
+            }
+        }
     }
 }
 
@@ -64,6 +101,10 @@ const tree = new Tree()
 const insert_button = document.getElementById("insert_button") as HTMLButtonElement
 insert_button.onclick = () => {
     const insert_input = document.getElementById("insert_value") as HTMLInputElement
+    
+    if (insert_input.value === ""){
+        return
+    }
     const insert_value = Number(insert_input.value)
     if (isNaN(insert_value)){
         insert_input.value = ""
