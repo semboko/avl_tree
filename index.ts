@@ -24,10 +24,17 @@ class TreeNode {
         this.value = value
     }
 
+    getX(this: TreeNode): number {
+        const box_width = canvas.width / (2 ** this.pos.h)
+        return box_width * this.pos.v + box_width / 2
+    }
+
     render(this: TreeNode, ctx: CanvasRenderingContext2D,x: number, y: number, radius: number) {
         ctx.beginPath()
         ctx.ellipse(x, y, radius, radius, 0, 0, 360)
         ctx.stroke()
+        ctx.fillStyle = "#FFFFFF"
+        ctx.fill()
         ctx.font = "25px Arial";
         ctx.fillStyle = "#333333"
         ctx.textAlign = "center"
@@ -79,12 +86,22 @@ class Tree {
         while (queue.length > 0){
             const node: TreeNode = queue.pop()
             const y = 25 + node.pos.h * 50
-            const box_width = canvas.width / (2 ** node.pos.h)
-            const x = box_width * node.pos.v + box_width / 2
+            const x = node.getX()
 
-            if (box_width > this.node_radius){
-                node.render(ctx, x, y, this.node_radius)
+            if (node.parent !== null) {
+                const py = y - 50
+                const px = node.parent.getX()
+
+                const alpha = Math.atan2(x - px, y - py)
+                const dx = Math.sin(alpha) * 25
+                const dy = Math.cos(alpha) * 25
+                ctx.beginPath()
+                ctx.moveTo(px + dx, py + dy)
+                ctx.lineTo(x, y)
+                ctx.stroke()
             }
+            
+            node.render(ctx, x, y, this.node_radius)
 
             if(node.left !== null){
                 queue.push(node.left)
