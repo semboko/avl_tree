@@ -1,7 +1,3 @@
-const canvas = document.getElementById("canvas") as HTMLCanvasElement
-const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
-
-
 class NodePosition{
     h: number
     v: number
@@ -10,6 +6,13 @@ class NodePosition{
         this.h = h
         this.v = v
     }
+}
+
+class DrawParams{
+    node_radius: number = 25
+    scale: number = 1
+    shift_x: number = 0
+    shift_y: number = 0
 }
 
 
@@ -24,7 +27,7 @@ class TreeNode {
         this.value = value
     }
 
-    getX(this: TreeNode): number {
+    getX(this: TreeNode, canvas: HTMLCanvasElement): number {
         const box_width = canvas.width / (2 ** this.pos.h)
         return box_width * this.pos.v + box_width / 2
     }
@@ -47,7 +50,7 @@ class TreeNode {
 class Tree {
     root: TreeNode | null = null
 
-    node_radius: number = 25
+    draw: DrawParams = new DrawParams()
 
     add_node(this: Tree, value: number): void {
         const new_node = new TreeNode(value)
@@ -84,24 +87,24 @@ class Tree {
         const queue: TreeNode[] = [this.root]
 
         while (queue.length > 0){
-            const node: TreeNode = queue.pop()
-            const y = 25 + node.pos.h * 50
-            const x = node.getX()
+            const node: TreeNode = queue.pop() as TreeNode
+            const y = this.draw.node_radius + node.pos.h * this.draw.node_radius * 2
+            const x = node.getX(ctx.canvas)
 
             if (node.parent !== null) {
-                const py = y - 50
-                const px = node.parent.getX()
+                const py = y - this.draw.node_radius * 2
+                const px = node.parent.getX(ctx.canvas)
 
                 const alpha = Math.atan2(x - px, y - py)
-                const dx = Math.sin(alpha) * 25
-                const dy = Math.cos(alpha) * 25
+                const dx = Math.sin(alpha) * this.draw.node_radius
+                const dy = Math.cos(alpha) * this.draw.node_radius
                 ctx.beginPath()
                 ctx.moveTo(px + dx, py + dy)
                 ctx.lineTo(x, y)
                 ctx.stroke()
             }
             
-            node.render(ctx, x, y, this.node_radius)
+            node.render(ctx, x, y, this.draw.node_radius)
 
             if(node.left !== null){
                 queue.push(node.left)
@@ -113,23 +116,38 @@ class Tree {
     }
 }
 
-const tree = new Tree()
+window.onload = () => {
+    const canvas = document.getElementById("canvas") as HTMLCanvasElement
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
 
-const insert_button = document.getElementById("insert_button") as HTMLButtonElement
-insert_button.onclick = () => {
-    const insert_input = document.getElementById("insert_value") as HTMLInputElement
-    
-    if (insert_input.value === ""){
-        return
+    const tree = new Tree()
+
+    for (let i = 0; i < 20; i++) {
+        const value = Math.round(Math.random() * 100)
+        tree.add_node(value)
     }
-    const insert_value = Number(insert_input.value)
-    if (isNaN(insert_value)){
-        insert_input.value = ""
-        return
-    }
-    tree.add_node(insert_value)
-    insert_input.value = ""
-    ctx.fillStyle = "white"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
     tree.render(ctx)
+
+    const insert_button = document.getElementById("insert_button") as HTMLButtonElement
+    insert_button.onclick = () => {
+        const insert_input = document.getElementById("insert_value") as HTMLInputElement
+        
+        if (insert_input.value === ""){
+            return
+        }
+        const insert_value = Number(insert_input.value)
+        if (isNaN(insert_value)){
+            insert_input.value = ""
+            return
+        }
+        tree.add_node(insert_value)
+        insert_input.value = ""
+        ctx.fillStyle = "white"
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        tree.render(ctx)
+    }
+
+    canvas.addEventListener("click", (event) => {
+        console.log(event)
+    })
 }
