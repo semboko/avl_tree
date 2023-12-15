@@ -22,6 +22,7 @@ class TreeNode {
     left: TreeNode | null = null
     right: TreeNode | null = null
     parent: TreeNode | null = null
+    height: number = 1
 
     constructor(value: number) {
         this.value = value
@@ -38,11 +39,22 @@ class TreeNode {
         ctx.stroke()
         ctx.fillStyle = "#FFFFFF"
         ctx.fill()
-        ctx.font = "25px Arial";
+        ctx.font = radius + "px Arial"
         ctx.fillStyle = "#333333"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.fillText(this.value.toString(), x, y)
+        
+        ctx.font = radius/2 + "px Arial"
+        const rx = x + radius * .8
+        const ry = y - radius * .8
+        const rs = radius/2
+
+        ctx.rect(rx, ry, rs, rs)
+        ctx.stroke()
+
+        ctx.fillStyle = "#333333"
+        ctx.fillText(this.height.toString(), rx + rs/2, ry + rs/2)
     }
 }
 
@@ -79,7 +91,17 @@ class Tree {
         }
     }
 
+    scale(this: Tree, canvasX: number, canvasY: number, z: number): void {
+        if (z < 0){
+            this.draw.scale -= .1
+        } else {
+            this.draw.scale += .1
+        }
+    }
+
     render(this: Tree, ctx: CanvasRenderingContext2D){
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
         if (this.root === null){
             return
         }
@@ -88,23 +110,24 @@ class Tree {
 
         while (queue.length > 0){
             const node: TreeNode = queue.pop() as TreeNode
-            const y = this.draw.node_radius + node.pos.h * this.draw.node_radius * 2
+            const node_radius = this.draw.node_radius * this.draw.scale
+            const y = node_radius + node.pos.h * node_radius * 2
             const x = node.getX(ctx.canvas)
 
             if (node.parent !== null) {
-                const py = y - this.draw.node_radius * 2
+                const py = y - node_radius * 2
                 const px = node.parent.getX(ctx.canvas)
 
                 const alpha = Math.atan2(x - px, y - py)
-                const dx = Math.sin(alpha) * this.draw.node_radius
-                const dy = Math.cos(alpha) * this.draw.node_radius
+                const dx = Math.sin(alpha) * node_radius
+                const dy = Math.cos(alpha) * node_radius
                 ctx.beginPath()
                 ctx.moveTo(px + dx, py + dy)
                 ctx.lineTo(x, y)
                 ctx.stroke()
             }
             
-            node.render(ctx, x, y, this.draw.node_radius)
+            node.render(ctx, x, y, node_radius)
 
             if(node.left !== null){
                 queue.push(node.left)
@@ -142,12 +165,14 @@ window.onload = () => {
         }
         tree.add_node(insert_value)
         insert_input.value = ""
-        ctx.fillStyle = "white"
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
         tree.render(ctx)
     }
 
-    canvas.addEventListener("click", (event) => {
-        console.log(event)
+    canvas.addEventListener("wheel", (event: WheelEvent) => {
+        const canvas_rect = canvas.getBoundingClientRect()
+        const cx = canvas_rect.left
+        const cy = canvas_rect.top
+        tree.scale(event.x - cx, event.y - cy, event.deltaY)
+        tree.render(ctx)
     })
 }
