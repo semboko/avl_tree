@@ -29,8 +29,33 @@ class TreeNode {
     }
 
     getX(this: TreeNode, canvas: HTMLCanvasElement): number {
+        if (this.parent === null){
+            this.pos.v = 0
+        } else {
+            if (this === this.parent.left){
+                this.pos.v = this.parent.pos.v * 2
+            } else {
+                this.pos.v = this.parent.pos.v * 2 + 1
+            }
+        }
         const box_width = canvas.width / (2 ** this.pos.h)
         return box_width * this.pos.v + box_width / 2
+    }
+
+    left_height(this: TreeNode): number {
+        return this.left === null ? 0 : this.left.height
+    }
+
+    right_height(this: TreeNode): number {
+        return this.right === null ? 0 : this.right.height
+    }
+
+    getMaxHeight(this: TreeNode): number {
+        return Math.max(this.left_height(), this.right_height())
+    }
+
+    balance(this: TreeNode): number {
+        return this.left_height() - this.right_height()
     }
 
     render(this: TreeNode, ctx: CanvasRenderingContext2D,x: number, y: number, radius: number) {
@@ -64,6 +89,75 @@ class Tree {
 
     draw: DrawParams = new DrawParams()
 
+    protected left_rotate(this: Tree, x: TreeNode): void {
+        const y = x.right
+        x.right = y.left
+        if (y.left !== null){
+            y.left.parent = x
+        }
+        y.parent = x.parent
+        if (x.parent === null){
+            this.root = y
+        } else if (x === x.parent.left){
+            x.parent.left = y
+        } else {
+            x.parent.right = y
+        }
+        y.left = x
+        x.parent = y
+
+        x.height = x.getMaxHeight() + 1
+        y.height = y.getMaxHeight() + 1
+    }
+
+    protected right_rotate(this: Tree, y: TreeNode): void {
+        const x = y.left
+        y.left = x.right
+        if (x.right !== null){
+            x.right.parent = y
+        }
+        x.parent = y.parent
+        if (y.parent == null){
+            this.root = x
+        } else if (y == y.parent.right){
+            y.parent.right = x
+        } else {
+            y.parent.left = x
+        }
+        x.right = y
+        y.parent = x
+
+        y.height = y.getMaxHeight() + 1
+        x.height = x.getMaxHeight() + 1
+    }
+
+    add_fixup(this: Tree, node: TreeNode): void {
+        let x = node
+        while (x !== null){
+            x.height = x.getMaxHeight() + 1
+
+            const balance = x.balance()
+            
+            if (balance > 1){
+                const left_balance = x.left.balance()
+                if (left_balance < 0) {
+                    this.left_rotate(x.left)
+                }
+                this.right_rotate(x)
+            }
+
+            else if (balance < -1){
+                const right_balance = x.right.balance()
+                if (right_balance > 0) {
+                    this.right_rotate(x.right)
+                }
+                this.left_rotate(x)
+            }
+
+            x = x.parent
+        }
+    }
+    
     add_node(this: Tree, value: number): void {
         const new_node = new TreeNode(value)
         let x: TreeNode | null = this.root
@@ -89,6 +183,8 @@ class Tree {
             y.left = new_node
             new_node.pos = new NodePosition(y.pos.h + 1, y.pos.v * 2)
         }
+
+        this.add_fixup(new_node)
     }
 
     scale(this: Tree, canvasX: number, canvasY: number, z: number): void {
@@ -107,15 +203,18 @@ class Tree {
         }
         
         const queue: TreeNode[] = [this.root]
+        const height = this.root.height
+        this.root.pos.v = 0
 
         while (queue.length > 0){
             const node: TreeNode = queue.pop() as TreeNode
             const node_radius = this.draw.node_radius * this.draw.scale
+            node.pos.h = height - node.height
             const y = node_radius + node.pos.h * node_radius * 2
             const x = node.getX(ctx.canvas)
 
             if (node.parent !== null) {
-                const py = y - node_radius * 2
+                const py = node.parent.pos.h * node_radius + node_radius
                 const px = node.parent.getX(ctx.canvas)
 
                 const alpha = Math.atan2(x - px, y - py)
@@ -145,14 +244,21 @@ window.onload = () => {
 
     const tree = new Tree()
 
-    for (let i = 0; i < 20; i++) {
-        const value = Math.round(Math.random() * 100)
-        tree.add_node(value)
-    }
+    // for (let i = 0; i < 0; i++) {
+    //     const value = Math.round(Math.random() * 100)
+    //     tree.add_node(value)
+    // }
+
+    // tree.add_node(1)
+    // tree.add_node(3)
+    // tree.add_node(2)
+    // tree.add_node(4)
+    // tree.add_node(5)
     tree.render(ctx)
 
     const insert_button = document.getElementById("insert_button") as HTMLButtonElement
     insert_button.onclick = () => {
+        console.log(tree)
         const insert_input = document.getElementById("insert_value") as HTMLInputElement
         
         if (insert_input.value === ""){
