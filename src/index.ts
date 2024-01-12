@@ -131,7 +131,7 @@ class Tree {
         x.height = x.getMaxHeight() + 1
     }
 
-    add_fixup(this: Tree, node: TreeNode): void {
+    node_fixup(this: Tree, node: TreeNode): void {
         let x = node
         while (x !== null){
             x.height = x.getMaxHeight() + 1
@@ -184,7 +184,72 @@ class Tree {
             new_node.pos = new NodePosition(y.pos.h + 1, y.pos.v * 2)
         }
 
-        this.add_fixup(new_node)
+        this.node_fixup(new_node)
+    }
+
+    transplant(this: Tree, u: TreeNode, v: TreeNode): void {
+        if(u.parent === null){
+            this.root = v
+        } else if (u === u.parent.left){
+            u.parent.left = v
+        } else {
+            u.parent.right = v
+        }
+        if(v !== null){
+            v.parent = u.parent
+        }
+    }
+
+    delete(this: Tree, value: number): void {
+        const node = this.search(value)
+        if(node === null){
+            return
+        }
+        if(node.right === null){
+            this.transplant(node, node.left)
+            this.node_fixup(node.left)
+        }
+        else if(node.left === null){
+            this.transplant(node, node.right)
+            this.node_fixup(node.right)
+        }
+        else {
+            const y = this.tree_minimum(node.right)
+            if(y.parent !== node){
+                this.transplant(y, y.right)
+                y.right = node.right
+                y.right.parent = node
+            }
+            this.transplant(node, y)
+            y.left = node.left
+            y.left.parent = node
+        }
+        
+    }
+
+    tree_minimum(this: Tree, root: TreeNode): TreeNode{
+        let min = root
+        while (min.left !== null){
+            min = min.left
+        }
+        return min
+    }
+
+    search(this: Tree, value: number): TreeNode | null {
+        let x = this.root
+
+        while (x !== null){
+            if(x.value === value){
+                return x
+            }
+            if(x.value >= value){
+                x = x.left
+            } else{
+                x = x.right
+            }
+        }
+
+        return null
     }
 
     scale(this: Tree, canvasX: number, canvasY: number, z: number): void {
@@ -249,11 +314,6 @@ window.onload = () => {
     //     tree.add_node(value)
     // }
 
-    // tree.add_node(1)
-    // tree.add_node(3)
-    // tree.add_node(2)
-    // tree.add_node(4)
-    // tree.add_node(5)
     tree.render(ctx)
 
     const insert_button = document.getElementById("insert_button") as HTMLButtonElement
@@ -281,4 +341,22 @@ window.onload = () => {
         tree.scale(event.x - cx, event.y - cy, event.deltaY)
         tree.render(ctx)
     })
+
+
+    const delete_button = document.getElementById("delete_button") as HTMLButtonElement
+    delete_button.onclick = () => {
+        const insert_input = document.getElementById("insert_value") as HTMLInputElement
+        
+        if (insert_input.value === ""){
+            return
+        }
+        const insert_value = Number(insert_input.value)
+        if (isNaN(insert_value)){
+            insert_input.value = ""
+            return
+        }
+        tree.delete(insert_value)
+        insert_input.value = ""
+        tree.render(ctx)
+    }
 }
