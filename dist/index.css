@@ -9,3 +9,25 @@
     margin: 10px;
     border: 1px solid rgb(230, 230, 230);
 }
+
+.history-container{
+    display: block;
+    position: relative;
+    border: 1px solid #f6f6f6;
+    margin: 0;
+    padding: 15px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.history-container input[type="radio"]{
+    position: absolute;
+    cursor: pointer;
+}
+
+.history-container input[type="radio"]:checked::after{
+    display: inline-block;
+    background-color: #333333;
+}
